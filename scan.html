@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FORTIS — Scan to Data</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root{
+  --navy:#0A1F3F;--blue:#0058A3;--teal:#00838F;--red:#E21F26;--green:#0D8048;--gold:#B8860B;
+  --bg:#F5F6FA;--card:#FFF;--txt:#1A1A2E;--txt2:#4B5563;--muted:#9CA3AF;--bdr:#E5E7EB;
+  --r:12px;--r2:16px;--orange:#EA580C;--purple:#7C3AED;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
+
+/* STATUS BAR */
+.sbar{background:var(--navy);color:#fff;padding:6px 16px;font-size:10px;display:flex;justify-content:space-between;align-items:center}
+.sbar-t{font-family:'JetBrains Mono',monospace;font-weight:600}
+
+/* HEADER */
+.hdr{background:#fff;padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.hdr-l{display:flex;align-items:center;gap:10px}
+.hdr-bk{width:32px;height:32px;border-radius:8px;border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2);font-size:14px;background:#fff;text-decoration:none}
+.hdr-tt{font-size:15px;font-weight:700}
+.hdr-sub{font-size:10px;color:var(--muted)}
+.hdr-r{display:flex;gap:6px}
+.hdr-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2);font-size:13px;background:#fff}
+
+/* TABS */
+.tabs{background:#fff;border-bottom:2px solid var(--bdr);display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:57px;z-index:90}
+.tab{flex:1;min-width:0;padding:10px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;transition:.2s;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:4px;letter-spacing:.2px}
+.tab.on{color:var(--navy);border-bottom-color:var(--blue);background:#F5F8FF}
+.tab i{font-size:11px}
+
+/* SCREEN PANES */
+.pane{display:none;padding:14px 14px 80px;animation:fi .25s ease}
+.pane.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.cd{background:#fff;border-radius:var(--r2);border:1px solid var(--bdr);overflow:hidden;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.cd-h{padding:11px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:#FAFBFC}
+.cd-t{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+.cd-t i{font-size:13px}
+.cd-b{padding:14px}
+
+/* API KEY BOX */
+.api-box{background:linear-gradient(135deg,#0A1F3F,#1a3a6b);border-radius:var(--r2);padding:14px;margin-bottom:12px;color:#fff}
+.api-box input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-family:'Outfit',sans-serif;font-size:13px;margin-top:8px}
+.api-box input::placeholder{color:rgba(255,255,255,.5)}
+.api-box input:focus{outline:none;border-color:rgba(255,255,255,.6)}
+
+/* MODE BUTTONS */
+.mode-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.mb{padding:14px 10px;border-radius:var(--r2);border:2px solid var(--bdr);background:#fff;cursor:pointer;text-align:center;transition:all .2s;font-family:'Outfit',sans-serif}
+.mb:hover{border-color:var(--blue)}
+.mb.am{border-color:var(--blue);background:#EFF6FF}
+.mb.ak{border-color:var(--orange);background:#FFF7ED}
+.mb-icon{font-size:22px;margin-bottom:6px}
+.mb-label{font-size:11px;font-weight:700;display:block}
+.mb-sub{font-size:9px;color:var(--muted);margin-top:2px;display:block}
+
+/* DROPZONE */
+.dz{border:2px dashed var(--bdr);border-radius:var(--r2);padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;background:#FAFBFC}
+.dz:hover{border-color:var(--blue);background:#F0F7FF}
+.dz.hm{border-color:var(--blue);background:#EFF6FF}
+.dz.hk{border-color:var(--orange);background:#FFF7ED}
+.dz img{width:100%;max-height:200px;object-fit:contain;border-radius:8px}
+.dz-icon{font-size:36px;margin-bottom:8px}
+.dz-txt{font-size:12px;color:var(--txt2);font-weight:600}
+.dz-sub{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* BUTTONS */
+.btn-primary{width:100%;padding:13px;border-radius:var(--r);background:var(--navy);color:#fff;font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;border:none;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
+.btn-primary:hover{background:#162f5c}
+.btn-primary:disabled{background:var(--bdr);color:var(--muted);cursor:not-allowed}
+.btn-red{background:var(--red)}.btn-red:hover{background:#B91A20}
+.btn-green{background:var(--green)}.btn-green:hover{background:#0a6038}
+.btn-outline{width:100%;padding:11px;border-radius:var(--r);background:#fff;color:var(--navy);font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;border:1.5px solid var(--bdr);cursor:pointer;margin-top:8px}
+.btn-sm{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;cursor:pointer;border:none;transition:.2s}
+.btn-export{background:#fff;color:var(--green);border:1.5px solid var(--green)}.btn-export:hover{background:#F0FDF4}
+.btn-export:disabled{opacity:.4;cursor:not-allowed}
+.btn-danger{background:#fff;color:var(--red);border:1.5px solid #FECACA}.btn-danger:hover{background:#FEF2F2}
+
+/* FORM FIELDS */
+.fs{margin-bottom:12px}
+.fs-title{font-size:11px;font-weight:700;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:6px;padding-bottom:5px;border-bottom:2px solid var(--blue)}
+.fg{display:flex;flex-direction:column;margin-bottom:8px}
+.fg label{font-size:9px;font-weight:700;color:var(--txt2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.fg input,.fg select{padding:10px 12px;border:1.5px solid var(--bdr);border-radius:var(--r);font-size:13px;font-family:'Outfit',sans-serif;background:#fff;-webkit-appearance:none}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,88,163,.08)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.3px}
+.b-green{background:#D1FAE5;color:#065F46}.b-red{background:#FEE2E2;color:#991B1B}
+.b-blue{background:#DBEAFE;color:#1E40AF}.b-orange{background:#FFEDD5;color:#9A3412}
+.b-gold{background:#FEF3C7;color:#92400E}.b-purple{background:#EDE9FE;color:#5B21B6}
+.b-gray{background:#F3F4F6;color:#4B5563}.b-teal{background:#CCFBF1;color:#0F766E}
+.b-navy{background:#E0E7FF;color:#1E3A5F}
+
+/* KPI STATS */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat{background:#fff;border-radius:var(--r2);padding:14px;border-left:4px solid transparent;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat-num{font-size:26px;font-weight:900;letter-spacing:-1px;line-height:1}
+.stat-label{font-size:10px;color:var(--txt2);margin-top:3px;font-weight:500}
+.stat-sub{font-size:9px;font-weight:700;margin-top:5px;display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px}
+.s-blue{border-left-color:var(--blue)}.s-blue .stat-num{color:var(--blue)}
+.s-red{border-left-color:var(--red)}.s-red .stat-num{color:var(--red)}
+.s-navy{border-left-color:var(--navy)}.s-navy .stat-num{color:var(--navy)}
+.s-teal{border-left-color:var(--teal)}.s-teal .stat-num{color:var(--teal)}
+.s-green{border-left-color:var(--green)}.s-green .stat-num{color:var(--green)}
+
+/* HEALTH RING */
+.health-wrap{display:flex;align-items:center;gap:16px;padding:6px 0}
+.health-ring{position:relative;flex-shrink:0}
+.health-ring svg{display:block}
+.health-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.health-score{font-size:24px;font-weight:900;line-height:1}
+.health-lbl{font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.health-bars{flex:1}
+.hbar{margin-bottom:8px}
+.hbar-top{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
+.hbar-label{font-weight:600;color:var(--txt2)}
+.hbar-val{font-weight:700;color:var(--navy)}
+.hbar-track{height:6px;background:#F3F4F6;border-radius:3px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+
+/* ACTIVITY FEED */
+.act-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #F9FAFB}
+.act-item:last-child{border-bottom:none}
+.act-dot{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0}
+.act-info{flex:1;min-width:0}
+.act-title{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-meta{font-size:9px;color:var(--muted);margin-top:2px}
+.act-time{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);flex-shrink:0}
+
+/* CLOSING SUMMARY TABLE */
+.cs-table{width:100%;border-collapse:collapse;font-size:11px}
+.cs-table th{background:#0A1F3F;color:#fff;padding:9px 10px;text-align:left;font-size:10px;font-weight:700}
+.cs-table td{padding:9px 10px;border-bottom:1px solid var(--bdr);vertical-align:top}
+.cs-table tr:hover td{background:#F8FAFF}
+
+/* NL BOX */
+.nl-box{background:linear-gradient(135deg,#0A1F3F,#0058A3);border-radius:var(--r2);padding:16px;color:#fff;margin-bottom:12px}
+.nl-icon{font-size:20px;margin-bottom:6px;opacity:.8}
+.nl-title{font-size:11px;font-weight:700;letter-spacing:1.5px;opacity:.7;margin-bottom:6px}
+.nl-text{font-size:13px;font-weight:500;line-height:1.5;margin-bottom:10px}
+.nl-chips{display:flex;flex-wrap:wrap;gap:6px}
+.nl-chip{background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600}
+.nl-chip.ok{background:rgba(13,128,72,.4)}
+.nl-chip.warn{background:rgba(234,88,12,.4)}
+.nl-chip.info{background:rgba(0,131,143,.4)}
+
+/* VENDOR BAR */
+.vbar-item{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.vbar-name{font-size:10px;font-weight:600;width:100px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vbar-track{flex:1;height:8px;background:#F3F4F6;border-radius:4px;overflow:hidden}
+.vbar-fill{height:100%;border-radius:4px;background:var(--blue)}
+.vbar-num{font-size:10px;font-weight:700;color:var(--navy);width:24px;text-align:right;flex-shrink:0}
+
+/* LOG TABLE */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--bdr);border-radius:var(--r);margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:10px;min-width:500px}
+th{background:#F3F4F6;padding:8px 10px;text-align:left;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);border-bottom:2px solid var(--bdr)}
+td{padding:7px 10px;border-bottom:1px solid #F5F6FA;vertical-align:middle}
+tr:hover td{background:#F8FAFF}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:30px 20px;color:var(--muted)}
+.empty i{font-size:28px;opacity:.4;display:block;margin-bottom:8px}
+.empty p{font-size:11px}
+
+/* ALERT BANNERS */
+.ban-warn{background:#FFF7ED;border:1px solid #FED7AA;border-radius:var(--r);padding:10px 14px;display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;font-size:11px;color:var(--orange)}
+.ban-ok{background:#F0FDF4;border:1px solid #A7F3D0;border-radius:var(--r);padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:11px;color:var(--green)}
+.ban-err{background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--r);padding:12px 14px;font-size:12px;color:var(--red);margin-bottom:12px;display:flex;gap:8px;align-items:flex-start}
+.loading-box{text-align:center;padding:30px;color:var(--blue)}
+.loading-box i{font-size:28px;margin-bottom:8px;display:block;animation:spin 1.2s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* FBAR */
+.fbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.fbar select{padding:7px 10px;border:1.5px solid var(--bdr);border-radius:8px;font-family:'Outfit',sans-serif;font-size:11px;background:#fff}
+
+/* ANOMALY */
+.anom-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #FEE2E2}
+.anom-item:last-child{border-bottom:none}
+.anom-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.anom-txt{font-size:11px;color:var(--txt)}
+.anom-meta{font-size:9px;color:var(--muted);margin-top:2px}
+
+/* BOTTOM FAB */
+.fab{position:fixed;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(226,31,38,.4);display:flex;align-items:center;justify-content:center;z-index:200;transition:transform .2s}
+.fab:hover{transform:scale(1.08)}
+
+/* ===== DESKTOP LAYOUT (≥1024px) ===== */
+@media(min-width:1024px){
+  /* Body full width on desktop */
+  body{max-width:100%!important;width:100%!important;margin:0!important;overflow-x:hidden}
+
+  /* Wrapper utama */
+  .desktop-wrap{display:flex;min-height:100vh}
+
+  /* SIDEBAR */
+  .sidebar{width:240px;min-width:240px;background:var(--navy);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:200;overflow-y:auto}
+  .sidebar-logo{padding:20px 20px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+  .sidebar-badge{background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:3px 8px;letter-spacing:2px;border-radius:4px;display:inline-block;margin-bottom:8px}
+  .sidebar-title{font-size:16px;font-weight:800;letter-spacing:-.3px}
+  .sidebar-sub{font-size:9px;opacity:.5;margin-top:2px;letter-spacing:.5px}
+  .sidebar-nav{padding:14px 10px;flex:1}
+  .sidebar-section{font-size:9px;font-weight:700;letter-spacing:2px;opacity:.4;padding:10px 10px 6px;text-transform:uppercase}
+  .snav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:.15s;margin-bottom:2px;font-size:13px;font-weight:600;color:rgba(255,255,255,.7);border:none;background:none;width:100%;text-align:left}
+  .snav:hover{background:rgba(255,255,255,.08);color:#fff}
+  .snav.on{background:rgba(255,255,255,.15);color:#fff}
+  .snav i{font-size:14px;width:18px;text-align:center}
+  .snav-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:auto}
+  .snav-badge.blue{background:var(--blue)}
+  .sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.1);font-size:10px;opacity:.5}
+
+  /* MAIN CONTENT AREA */
+  .main-area{margin-left:240px;flex:1;display:flex;flex-direction:column;min-height:100vh;width:calc(100% - 240px)}
+
+  /* TOP BAR (desktop) */
+  .topbar{background:#fff;border-bottom:1px solid var(--bdr);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .topbar-title{font-size:18px;font-weight:800;color:var(--navy)}
+  .topbar-sub{font-size:11px;color:var(--muted);margin-top:1px}
+  .topbar-right{display:flex;align-items:center;gap:12px}
+  .topbar-clock{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);background:var(--bg);padding:6px 12px;border-radius:8px;border:1px solid var(--bdr)}
+  .topbar-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:.2s}
+
+  /* CONTENT GRID */
+  .desk-content{padding:24px 28px;flex:1}
+  .desk-grid{display:grid;grid-template-columns:420px 1fr;gap:24px;align-items:start}
+  .desk-full{grid-column:1/-1}
+
+  /* DASHBOARD DESKTOP GRID */
+  .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .dash-full{grid-column:1/-1}
+  .stats{grid-template-columns:repeat(4,1fr)}
+
+  /* Hide mobile elements on desktop */
+  .sbar{display:none!important}
+  .hdr{display:none!important}
+  .tabs{display:none!important}
+  .fab{display:none!important}
+  .pane{display:none!important;padding:0}
+  .pane.on{display:none!important}
+
+  /* Show desktop elements */
+  .desk-pane{display:none;animation:fi .25s ease}
+  .desk-pane.on{display:block}
+}
+
+/* Mobile: hide desktop elements */
+@media(max-width:1023px){
+  .sidebar{display:none}
+  .main-area{display:contents}
+  .topbar{display:none}
+  .desk-content{display:none}
+  .desk-pane{display:none!important}
+  body{max-width:430px;margin:0 auto}
+}
+</style>
+</head>
+<body>
+
+<!-- STATUS BAR -->
+<div class="sbar">
+  <span class="sbar-t" id="clock">--:-- WITA</span>
+  <span id="dateBar" style="opacity:.7"></span>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-l">
+    <a href="index.html" class="hdr-bk"><i class="fas fa-arrow-left"></i></a>
+    <div>
+      <div class="hdr-tt">Scan to Data</div>
+      <div class="hdr-sub">AI Document Intelligence</div>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <div class="hdr-btn" onclick="showPane('dash')" title="Dashboard Harian"><i class="fas fa-chart-pie"></i></div>
+    <div class="hdr-btn" onclick="exportAll()" title="Export Excel"><i class="fas fa-download"></i></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab on" id="tab-scan" onclick="showPane('scan')"><i class="fas fa-camera"></i> Scan</div>
+  <div class="tab" id="tab-dash" onclick="showPane('dash')"><i class="fas fa-chart-pie"></i> Dashboard</div>
+  <div class="tab" id="tab-masuk" onclick="showPane('masuk')"><i class="fas fa-truck-ramp-box"></i> Masuk <span id="cntM" style="background:#DBEAFE;color:var(--blue);border-radius:20px;padding:1px 6px;font-size:9px;font-weight:700">0</span></div>
+  <div class="tab" id="tab-keluar" onclick="showPane('keluar')"><i class="fas fa-truck-arrow-right"></i> Keluar <span id="cntK" style="background:#FEE2E2;color:var(--red);border-radius:20px;padding:1px 6px;font-size:9px;font-weight:700">0</span></div>
+</div>
+
+<!-- ==================== SCAN PANE ==================== -->
+<div class="pane on" id="pane-scan">
+
+  <!-- API Key -->
+  <div class="api-box">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <i class="fas fa-key" style="font-size:13px;opacity:.8"></i>
+      <span style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:.8">ANTHROPIC API KEY</span>
+      <span id="ks" style="font-size:10px;margin-left:auto"></span>
+    </div>
+    <input type="password" id="apiKey" placeholder="sk-ant-api03-xxx..." oninput="chkKey()"/>
+  </div>
+
+  <!-- Mode Selector -->
+  <div class="mode-bar">
+    <div class="mb" id="btnM" onclick="setMode('masuk')">
+      <div class="mb-icon">📥</div>
+      <span class="mb-label" style="color:var(--blue)">BARANG MASUK</span>
+      <span class="mb-sub">IMB · DO · PO</span>
+    </div>
+    <div class="mb" id="btnK" onclick="setMode('keluar')">
+      <div class="mb-icon">📤</div>
+      <span class="mb-label" style="color:var(--orange)">BARANG KELUAR</span>
+      <span class="mb-sub">Bon Bintang · MIV</span>
+    </div>
+  </div>
+
+  <!-- Upload Zone -->
+  <div class="cd">
+    <div class="cd-h">
+      <div class="cd-t"><i class="fas fa-file-image" style="color:var(--blue)"></i> Upload Dokumen</div>
+      <span class="badge b-gray">JPG · PNG · PDF</span>
+    </div>
+    <div class="cd-b" style="padding:10px">
+      <div class="dz" id="dz" onclick="document.getElementById('fi').click()"
+        ondrop="onDrop(event)" ondragover="event.preventDefault()">
+        <div id="dc">
+          <div class="dz-icon">📄</div>
+          <div class="dz-txt">Tap untuk upload dokumen</div>
+          <div class="dz-sub">Bon Bintang · IMB/DO · Surat Jalan</div>
+        </div>
+      </div>
+      <input type="file" id="fi" accept="image/*,application/pdf" style="display:none" onchange="onFile(event)"/>
+      <div id="fn" style="font-size:11px;color:var(--muted);margin:6px 0;min-height:16px"></div>
+      <button class="btn-primary" id="pb" onclick="doScan()" disabled>
+        <i class="fas fa-robot"></i> PROSES DENGAN AI
+      </button>
+      <button class="btn-outline" onclick="document.getElementById('fi').click()">
+        <i class="fas fa-folder-open"></i> Ganti Dokumen
+      </button>
+    </div>
+  </div>
+
+  <!-- Scan Result / Form -->
+  <div id="scanArea">
+    <div class="empty" style="padding:20px">
+      <i class="fas fa-camera-retro"></i>
+      <p>Pilih mode & upload dokumen,<br>lalu proses dengan AI</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== DASHBOARD PANE ==================== -->
+<div class="pane" id="pane-dash">
+
+  <!-- NL Summary Box -->
+  <div class="nl-box" id="nlBox">
+    <div class="nl-icon"><i class="fas fa-robot"></i></div>
+    <div class="nl-title">DAILY INTELLIGENCE SUMMARY</div>
+    <div class="nl-text" id="nlText">Belum ada data hari ini. Mulai scan dokumen untuk generate dashboard.</div>
+    <div class="nl-chips" id="nlChips"></div>
+  </div>
+
+  <!-- KPI Stats -->
+  <div class="stats">
+    <div class="stat s-blue">
+      <div class="stat-num" id="dIn">0</div>
+      <div class="stat-label">Barang Masuk</div>
+      <div class="stat-sub" style="background:#DBEAFE;color:var(--blue)"><i class="fas fa-truck-ramp-box"></i> transaksi</div>
+    </div>
+    <div class="stat s-red">
+      <div class="stat-num" id="dOut">0</div>
+      <div class="stat-label">Barang Keluar</div>
+      <div class="stat-sub" style="background:#FEE2E2;color:var(--red)"><i class="fas fa-truck-arrow-right"></i> transaksi</div>
+    </div>
+    <div class="stat s-navy">
+      <div class="stat-num" id="dTot">0</div>
+      <div class="stat-label">Total Transaksi</div>
+      <div class="stat-sub" style="background:#E0E7FF;color:var(--navy)"><i class="fas fa-sigma"></i> hari ini</div>
+    </div>
+    <div class="stat s-teal">
+      <div class="stat-num" id="dVnd">0</div>
+      <div class="stat-label">Unique Vendor</div>
+      <div class="stat-sub" style="background:#CCFBF1;color:var(--teal)"><i class="fas fa-building"></i> perusahaan</div>
+    </div>
+  </div>
+
+  <!-- Health Score -->
+  <div class="cd">
+    <div class="cd-h">
+      <div class="cd-t"><i class="fas fa-heartbeat" style="color:var(--red)"></i> Operational Health Score</div>
+      <span class="badge b-green" id="hsBadge">—</span>
+    </div>
+    <div class="cd-b">
+      <div class="health-wrap">
+        <div class="health-ring">
+          <svg width="100" height="100" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="46" fill="none" stroke="#F3F4F6" stroke-width="10"/>
+            <circle id="hsArc" cx="55" cy="55" r="46" fill="none" stroke="#0D8048" stroke-width="10"
+              stroke-dasharray="289 289" stroke-dashoffset="289" stroke-linecap="round" transform="rotate(-90 55 55)"/>
+          </svg>
+          <div class="health-num">
+            <div class="health-score" id="hsNum" style="color:var(--green)">—</div>
+            <div class="health-lbl">/100</div>
+          </div>
+        </div>
+        <div class="health-bars" id="hsBars">
+          <div style="font-size:11px;color:var(--muted);text-align:center;padding:10px">Scan dokumen untuk kalkulasi</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Feed -->
+  <div class="cd">
+    <div class="cd-h">
+      <div class="cd-t"><i class="fas fa-stream" style="color:var(--teal)"></i> Activity Feed — Hari Ini</div>
+      <span class="badge b-teal" id="actBadge">0 aktivitas</span>
+    </div>
+    <div class="cd-b" style="padding:10px 14px" id="actFeed">
+      <div class="empty" style="padding:16px"><i class="fas fa-stream"></i><p>Belum ada aktivitas</p></div>
+    </div>
+  </div>
+
+  <!-- Top Vendor + Top Tujuan -->
+  <div class="cd">
+    <div class="cd-h">
+      <div class="cd-t"><i class="fas fa-ranking-star" style="color:var(--gold)"></i> Top Perusahaan / Vendor</div>
+    </div>
+    <div class="cd-b" id="topVendor">
+      <div class="empty" style="padding:16px"><i class="fas fa-building"></i><p>Belum ada data</p></div>
+    </div>
+  </div>
+
+  <div class="cd">
+    <div class="cd-h">
+      <div class="cd-t"><i class="fas fa-map-pin" style="color:var(--orange)"></i> Top Tujuan Barang Masuk</div>
+    </div>
+    <div class="cd-b" id="topTujuan">
+      <div class="empty" style="padding:16px"><i class="fas fa-map-pin"></i><p>Belum ada data</p></div>
+    </div>
+  </div>
+
+  <!-- Material Chart -->
+  <div class="cd">
+    <div class="cd-h">
+      <div class="cd-t"><i class="fas fa-boxes-stacked" style="color:var(--orange)"></i> Kategori Barang Keluar</div>
+    </div>
+    <div class="cd-b" style="padding:10px">
+      <div style="position:relative;height:180px">
+        <canvas id="chartBarang"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Closing Summary Table -->
+  <div class="cd">
+    <div class="cd-h">
+      <div class="cd-t"><i class="fas fa-flag-checkered" style="color:var(--purple)"></i> Closing Summary Harian</div>
+      <span class="badge b-purple">ISO 31000</span>
+    </div>
+    <div class="cd-b" style="padding:10px">
+      <div style="overflow-x:auto">
+        <table class="cs-table" id="csTable">
+          <thead>
+            <tr>
+              <th>Kategori</th>
+              <th>Volume</th>
+              <th>Status Kepatuhan</th>
+              <th>Risk Control Notes</th>
+            </tr>
+          </thead>
+          <tbody id="csBody">
+            <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);font-size:11px">Scan dokumen untuk generate closing summary</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anomaly Alert -->
+  <div class="cd" id="anomCard" style="display:none">
+    <div class="cd-h">
+      <div class="cd-t"><i class="fas fa-triangle-exclamation" style="color:var(--orange)"></i> Anomaly Alert</div>
+      <span class="badge b-orange" id="anomBadge">0</span>
+    </div>
+    <div class="cd-b" style="padding:10px 14px" id="anomList"></div>
+  </div>
+
+  <!-- Export Dashboard -->
+  <div style="display:flex;gap:8px;padding-bottom:8px">
+    <button class="btn-sm btn-export" style="flex:1;justify-content:center" onclick="exportAll()">
+      <i class="fas fa-file-excel"></i> Export Laporan Excel
+    </button>
+  </div>
+
+</div>
+
+<!-- ==================== LOG MASUK PANE ==================== -->
+<div class="pane" id="pane-masuk">
+  <div class="fbar">
+    <span style="font-size:11px;color:var(--muted)">Total: <b id="totM" style="color:var(--blue)">0</b></span>
+    <button class="btn-sm btn-export" id="exBtnM" onclick="exportXL('masuk')" disabled>
+      <i class="fas fa-download"></i> Export Masuk
+    </button>
+    <button class="btn-sm btn-danger" onclick="clrLog('masuk')"><i class="fas fa-trash"></i></button>
+  </div>
+  <div id="emptyM" class="empty"><i class="fas fa-truck-ramp-box"></i><p>Belum ada data barang masuk</p></div>
+  <div class="tbl-wrap" id="tblM" style="display:none">
+    <table>
+      <thead><tr><th>#</th><th>TGL</th><th>WKT</th><th>NO. KONTRAK</th><th>PERUSAHAAN</th><th>NAMA BARANG</th><th>TOT</th><th>SAT</th><th>DRIVER</th><th>NO. POL</th><th>TUJUAN</th><th>CEK</th><th>KET</th><th></th></tr></thead>
+      <tbody id="bdyM"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== LOG KELUAR PANE ==================== -->
+<div class="pane" id="pane-keluar">
+  <div class="fbar">
+    <span style="font-size:11px;color:var(--muted)">Total: <b id="totK" style="color:var(--red)">0</b></span>
+    <button class="btn-sm btn-export" id="exBtnK" onclick="exportXL('keluar')" disabled>
+      <i class="fas fa-download"></i> Export Keluar
+    </button>
+    <button class="btn-sm btn-danger" onclick="clrLog('keluar')"><i class="fas fa-trash"></i></button>
+  </div>
+  <div id="emptyK" class="empty"><i class="fas fa-truck-arrow-right"></i><p>Belum ada data barang keluar</p></div>
+  <div class="tbl-wrap" id="tblK" style="display:none">
+    <table>
+      <thead><tr><th>#</th><th>TGL</th><th>WKT</th><th>NO. MANIFEST</th><th>NAMA BARANG</th><th>TOT</th><th>SAT</th><th>DRIVER</th><th>NO. POL</th><th>DARI</th><th>TUJUAN</th><th>CEK</th><th>VENDOR</th><th></th></tr></thead>
+      <tbody id="bdyK"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" onclick="showPane('scan')" title="Scan Dokumen"><i class="fas fa-camera"></i></button>
+
+<!-- ==================== DESKTOP LAYOUT ==================== -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-badge">FORTIS</div>
+    <div class="sidebar-title">Scan to Data</div>
+    <div class="sidebar-sub">PT. KPI RU V BALIKPAPAN · SECURITY HSSE</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="sidebar-section">Menu</div>
+    <button class="snav on" id="dsk-tab-scan" onclick="dskPane('scan')"><i class="fas fa-camera"></i> Scan Dokumen</button>
+    <button class="snav" id="dsk-tab-dash" onclick="dskPane('dash')"><i class="fas fa-chart-pie"></i> Dashboard Harian</button>
+    <button class="snav" id="dsk-tab-masuk" onclick="dskPane('masuk')">
+      <i class="fas fa-truck-ramp-box"></i> Log Barang Masuk
+      <span class="snav-badge blue" id="dCntM">0</span>
+    </button>
+    <button class="snav" id="dsk-tab-keluar" onclick="dskPane('keluar')">
+      <i class="fas fa-truck-arrow-right"></i> Log Barang Keluar
+      <span class="snav-badge" id="dCntK">0</span>
+    </button>
+    <div class="sidebar-section" style="margin-top:10px">Export</div>
+    <button class="snav" onclick="exportAll()"><i class="fas fa-file-excel"></i> Export Semua Excel</button>
+    <button class="snav" onclick="exportXL('masuk')"><i class="fas fa-download"></i> Export Barang Masuk</button>
+    <button class="snav" onclick="exportXL('keluar')"><i class="fas fa-download"></i> Export Barang Keluar</button>
+  </div>
+  <div class="sidebar-footer">
+    <div id="dsk-clock" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,.6)"></div>
+    <div style="margin-top:2px">ISO 31000:2018 Compliance</div>
+  </div>
+</div>
+
+<div class="main-area">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="dskPageTitle">Scan Dokumen</div>
+      <div class="topbar-sub">AI Document Intelligence · FORTIS</div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-clock" id="dsk-topbar-clock">--:-- WITA</div>
+      <button class="topbar-btn" style="background:var(--navy);color:#fff" onclick="dskPane('scan')">
+        <i class="fas fa-camera"></i> Scan Baru
+      </button>
+      <button class="topbar-btn" style="background:#fff;color:var(--green);border:1.5px solid var(--green)" onclick="exportAll()">
+        <i class="fas fa-file-excel"></i> Export Excel
+      </button>
+    </div>
+  </div>
+
+  <div class="desk-content">
+
+    <!-- ===== DESK SCAN PANE ===== -->
+    <div class="desk-pane on" id="dpane-scan">
+      <div class="desk-grid">
+
+        <!-- LEFT: Upload + API -->
+        <div>
+          <!-- API Key -->
+          <div class="api-box" style="margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <i class="fas fa-key" style="font-size:13px;opacity:.8"></i>
+              <span style="font-size:11px;font-weight:700;letter-spacing:1px;opacity:.8">ANTHROPIC API KEY</span>
+              <span id="dks" style="font-size:10px;margin-left:auto"></span>
+            </div>
+            <input type="password" id="dApiKey" placeholder="sk-ant-api03-xxx..." oninput="dChkKey()"
+              style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-family:'Outfit',sans-serif;font-size:13px"/>
+          </div>
+
+          <!-- Mode -->
+          <div class="mode-bar" style="margin-bottom:16px">
+            <div class="mb" id="dBtnM" onclick="dSetMode('masuk')">
+              <div class="mb-icon">📥</div>
+              <span class="mb-label" style="color:var(--blue)">BARANG MASUK</span>
+              <span class="mb-sub">IMB · DO · PO</span>
+            </div>
+            <div class="mb" id="dBtnK" onclick="dSetMode('keluar')">
+              <div class="mb-icon">📤</div>
+              <span class="mb-label" style="color:var(--orange)">BARANG KELUAR</span>
+              <span class="mb-sub">Bon Bintang · MIV</span>
+            </div>
+          </div>
+
+          <!-- Upload -->
+          <div class="cd">
+            <div class="cd-h">
+              <div class="cd-t"><i class="fas fa-file-image" style="color:var(--blue)"></i> Upload Dokumen</div>
+              <span class="badge b-gray">JPG · PNG · PDF</span>
+            </div>
+            <div class="cd-b">
+              <div class="dz" id="dDz" onclick="document.getElementById('dFi').click()"
+                ondrop="dOnDrop(event)" ondragover="event.preventDefault()" style="min-height:200px">
+                <div id="dDc">
+                  <div class="dz-icon">📄</div>
+                  <div class="dz-txt">Klik atau drag & drop dokumen</div>
+                  <div class="dz-sub">Bon Bintang · IMB/DO · Surat Jalan · PDF</div>
+                </div>
+              </div>
+              <input type="file" id="dFi" accept="image/*,application/pdf" style="display:none" onchange="dOnFile(event)"/>
+              <div id="dFn" style="font-size:11px;color:var(--muted);margin:8px 0;min-height:16px"></div>
+              <button class="btn-primary" id="dPb" onclick="dDoScan()" disabled style="margin-top:8px">
+                <i class="fas fa-robot"></i> PROSES DENGAN AI
+              </button>
+              <button class="btn-outline" onclick="document.getElementById('dFi').click()" style="margin-top:8px">
+                <i class="fas fa-folder-open"></i> Ganti Dokumen
+              </button>
+            </div>
+          </div>
+
+          <!-- Info -->
+          <div class="cd">
+            <div class="cd-h"><div class="cd-t"><i class="fas fa-circle-info" style="color:var(--teal)"></i> Panduan</div></div>
+            <div class="cd-b" style="font-size:12px;color:var(--txt2);line-height:1.8">
+              <div>① Masukkan API Key Anthropic</div>
+              <div>② Pilih mode <b>Masuk</b> atau <b>Keluar</b></div>
+              <div>③ Upload foto/PDF dokumen</div>
+              <div>④ Klik <b>PROSES DENGAN AI</b></div>
+              <div>⑤ Edit hasil jika perlu → <b>Simpan</b></div>
+              <div>⑥ Export Excel dari menu sidebar</div>
+              <div style="margin-top:10px;padding:10px;background:#FFF7ED;border-radius:8px;color:var(--orange);font-size:11px">
+                <i class="fas fa-exclamation-triangle"></i> <b>Wajib verifikasi</b> hasil AI dengan dokumen fisik sebelum entry ke LASIK.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Scan Result -->
+        <div>
+          <div class="cd" style="min-height:400px">
+            <div class="cd-h">
+              <div class="cd-t"><i class="fas fa-table" style="color:var(--navy)"></i> Hasil Ekstraksi AI</div>
+              <span class="badge b-navy" id="dDocBadge">Menunggu dokumen...</span>
+            </div>
+            <div class="cd-b">
+              <div id="dScanArea">
+                <div class="empty" style="padding:40px">
+                  <i class="fas fa-robot" style="font-size:36px;opacity:.2;display:block;margin-bottom:12px"></i>
+                  <p style="font-size:13px">Upload dokumen dan klik<br><b>PROSES DENGAN AI</b></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats ringkas -->
+          <div class="stats" style="grid-template-columns:1fr 1fr 1fr 1fr">
+            <div class="stat s-blue"><div class="stat-num" id="dStM">0</div><div class="stat-label">Masuk</div></div>
+            <div class="stat s-red"><div class="stat-num" id="dStK">0</div><div class="stat-label">Keluar</div></div>
+            <div class="stat s-navy"><div class="stat-num" id="dStT">0</div><div class="stat-label">Total</div></div>
+            <div class="stat s-teal"><div class="stat-num" id="dStV">0</div><div class="stat-label">Vendor</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DESK DASHBOARD PANE ===== -->
+    <div class="desk-pane" id="dpane-dash">
+      <!-- NL Box -->
+      <div class="nl-box" id="dNlBox" style="margin-bottom:20px">
+        <div class="nl-icon"><i class="fas fa-robot"></i></div>
+        <div class="nl-title">DAILY INTELLIGENCE SUMMARY</div>
+        <div class="nl-text" id="dNlText">Belum ada data. Mulai scan dokumen.</div>
+        <div class="nl-chips" id="dNlChips"></div>
+      </div>
+      <!-- KPI 4 col -->
+      <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+        <div class="stat s-blue"><div class="stat-num" id="ddIn">0</div><div class="stat-label">Barang Masuk</div><div class="stat-sub" style="background:#DBEAFE;color:var(--blue)"><i class="fas fa-truck-ramp-box"></i> transaksi</div></div>
+        <div class="stat s-red"><div class="stat-num" id="ddOut">0</div><div class="stat-label">Barang Keluar</div><div class="stat-sub" style="background:#FEE2E2;color:var(--red)"><i class="fas fa-truck-arrow-right"></i> transaksi</div></div>
+        <div class="stat s-navy"><div class="stat-num" id="ddTot">0</div><div class="stat-label">Total Transaksi</div><div class="stat-sub" style="background:#E0E7FF;color:var(--navy)"><i class="fas fa-sigma"></i> hari ini</div></div>
+        <div class="stat s-teal"><div class="stat-num" id="ddVnd">0</div><div class="stat-label">Unique Vendor</div><div class="stat-sub" style="background:#CCFBF1;color:var(--teal)"><i class="fas fa-building"></i> perusahaan</div></div>
+      </div>
+      <!-- 2 col grid -->
+      <div class="dash-grid">
+        <!-- Health Score -->
+        <div class="cd">
+          <div class="cd-h"><div class="cd-t"><i class="fas fa-heartbeat" style="color:var(--red)"></i> Operational Health Score</div><span class="badge b-green" id="dHsBadge">—</span></div>
+          <div class="cd-b">
+            <div class="health-wrap">
+              <div class="health-ring">
+                <svg width="100" height="100" viewBox="0 0 110 110">
+                  <circle cx="55" cy="55" r="46" fill="none" stroke="#F3F4F6" stroke-width="10"/>
+                  <circle id="dHsArc" cx="55" cy="55" r="46" fill="none" stroke="#0D8048" stroke-width="10"
+                    stroke-dasharray="289 289" stroke-dashoffset="289" stroke-linecap="round" transform="rotate(-90 55 55)"/>
+                </svg>
+                <div class="health-num"><div class="health-score" id="dHsNum" style="color:var(--green)">—</div><div class="health-lbl">/100</div></div>
+              </div>
+              <div class="health-bars" id="dHsBars"><div style="font-size:11px;color:var(--muted);padding:10px">Scan dokumen untuk kalkulasi</div></div>
+            </div>
+          </div>
+        </div>
+        <!-- Activity Feed -->
+        <div class="cd">
+          <div class="cd-h"><div class="cd-t"><i class="fas fa-stream" style="color:var(--teal)"></i> Activity Feed</div><span class="badge b-teal" id="dActBadge">0 aktivitas</span></div>
+          <div class="cd-b" style="max-height:220px;overflow-y:auto" id="dActFeed"><div class="empty" style="padding:16px"><i class="fas fa-stream"></i><p>Belum ada aktivitas</p></div></div>
+        </div>
+        <!-- Top Vendor -->
+        <div class="cd">
+          <div class="cd-h"><div class="cd-t"><i class="fas fa-ranking-star" style="color:var(--gold)"></i> Top Perusahaan / Vendor</div></div>
+          <div class="cd-b" id="dTopVendor"><div class="empty" style="padding:16px"><i class="fas fa-building"></i><p>Belum ada data</p></div></div>
+        </div>
+        <!-- Top Tujuan -->
+        <div class="cd">
+          <div class="cd-h"><div class="cd-t"><i class="fas fa-map-pin" style="color:var(--orange)"></i> Top Tujuan Barang Masuk</div></div>
+          <div class="cd-b" id="dTopTujuan"><div class="empty" style="padding:16px"><i class="fas fa-map-pin"></i><p>Belum ada data</p></div></div>
+        </div>
+        <!-- Chart -->
+        <div class="cd">
+          <div class="cd-h"><div class="cd-t"><i class="fas fa-boxes-stacked" style="color:var(--orange)"></i> Kategori Barang Keluar</div></div>
+          <div class="cd-b"><div style="position:relative;height:200px"><canvas id="dChartBarang"></canvas></div></div>
+        </div>
+        <!-- Anomaly -->
+        <div class="cd" id="dAnomCard">
+          <div class="cd-h"><div class="cd-t"><i class="fas fa-triangle-exclamation" style="color:var(--orange)"></i> Anomaly Alert</div><span class="badge b-orange" id="dAnomBadge">0</span></div>
+          <div class="cd-b" id="dAnomList"><div class="empty" style="padding:16px"><i class="fas fa-check-circle" style="color:var(--green)"></i><p>Tidak ada anomali</p></div></div>
+        </div>
+        <!-- Closing Summary -->
+        <div class="cd dash-full">
+          <div class="cd-h"><div class="cd-t"><i class="fas fa-flag-checkered" style="color:var(--purple)"></i> Closing Summary Harian</div><span class="badge b-purple">ISO 31000</span></div>
+          <div class="cd-b" style="padding:10px"><div style="overflow-x:auto"><table class="cs-table"><thead><tr><th>Kategori</th><th>Volume</th><th>Status Kepatuhan</th><th>Risk Control Notes</th></tr></thead><tbody id="dCsBody"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);font-size:11px">Scan dokumen untuk generate closing summary</td></tr></tbody></table></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DESK LOG MASUK ===== -->
+    <div class="desk-pane" id="dpane-masuk">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div style="font-size:14px;font-weight:700;color:var(--navy)">Log Barang Masuk — <span id="dTotM" style="color:var(--blue)">0</span> transaksi</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm btn-export" id="dExM" onclick="exportXL('masuk')" disabled><i class="fas fa-download"></i> Export Excel Masuk</button>
+          <button class="btn-sm btn-danger" onclick="clrLog('masuk')"><i class="fas fa-trash"></i> Hapus Log</button>
+        </div>
+      </div>
+      <div id="dEmptyM" class="empty"><i class="fas fa-truck-ramp-box"></i><p>Belum ada data barang masuk</p></div>
+      <div class="tbl-wrap" id="dTblM" style="display:none">
+        <table style="min-width:900px;font-size:12px">
+          <thead><tr><th>#</th><th>TGL</th><th>WKT</th><th>NO. KONTRAK</th><th>PERUSAHAAN</th><th>NAMA BARANG</th><th>TOT</th><th>SAT</th><th>DRIVER</th><th>NO. POL</th><th>TUJUAN</th><th>PHYSICAL CHECK</th><th>KET</th><th></th></tr></thead>
+          <tbody id="dBdyM"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== DESK LOG KELUAR ===== -->
+    <div class="desk-pane" id="dpane-keluar">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div style="font-size:14px;font-weight:700;color:var(--navy)">Log Barang Keluar — <span id="dTotK" style="color:var(--red)">0</span> transaksi</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm btn-export" id="dExK" onclick="exportXL('keluar')" disabled><i class="fas fa-download"></i> Export Excel Keluar</button>
+          <button class="btn-sm btn-danger" onclick="clrLog('keluar')"><i class="fas fa-trash"></i> Hapus Log</button>
+        </div>
+      </div>
+      <div id="dEmptyK" class="empty"><i class="fas fa-truck-arrow-right"></i><p>Belum ada data barang keluar</p></div>
+      <div class="tbl-wrap" id="dTblK" style="display:none">
+        <table style="min-width:900px;font-size:12px">
+          <thead><tr><th>#</th><th>TGL</th><th>WKT</th><th>NO. MANIFEST</th><th>NAMA BARANG</th><th>TOT</th><th>SAT</th><th>DRIVER</th><th>NO. POL</th><th>DARI</th><th>TUJUAN</th><th>VERIFY CHECK</th><th>VENDOR</th><th></th></tr></thead>
+          <tbody id="dBdyK"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /desk-content -->
+</div><!-- /main-area -->
+
+<script>
+// ===================== STATE =====================
+let apiKey = '', mode = null, curFile = null, curType = null;
+let logM = JSON.parse(localStorage.getItem('fortis_logM') || '[]');
+let logK = JSON.parse(localStorage.getItem('fortis_logK') || '[]');
+let chartBarang = null;
+
+// ===================== CLOCK =====================
+function tick() {
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    n.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' }) + ' WITA';
+  document.getElementById('dateBar').textContent =
+    n.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+setInterval(tick, 1000); tick();
+
+// ===================== TABS =====================
+function showPane(id) {
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.getElementById('pane-' + id).classList.add('on');
+  document.getElementById('tab-' + id).classList.add('on');
+  if (id === 'dash') renderDash();
+}
+
+// ===================== API KEY =====================
+function chkKey() {
+  const v = document.getElementById('apiKey').value.trim();
+  const s = document.getElementById('ks');
+  if (v.startsWith('sk-ant')) {
+    apiKey = v;
+    s.innerHTML = '<span style="color:#A7F3D0;font-size:10px">✓ Valid</span>';
+  } else {
+    apiKey = '';
+    s.innerHTML = v.length > 5 ? '<span style="color:#FCA5A5;font-size:10px">✗ Invalid</span>' : '';
+  }
+  chkBtn();
+}
+
+// ===================== MODE =====================
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnM').className = 'mb' + (m === 'masuk' ? ' am' : '');
+  document.getElementById('btnK').className = 'mb' + (m === 'keluar' ? ' ak' : '');
+  if (curFile) {
+    document.getElementById('dz').className = 'dz h' + m;
+  }
+  chkBtn();
+}
+
+function chkBtn() {
+  document.getElementById('pb').disabled = !(apiKey && mode && curFile);
+}
+
+// ===================== FILE =====================
+function onDrop(e) { e.preventDefault(); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); }
+function onFile(e) { if (e.target.files[0]) loadFile(e.target.files[0]); }
+
+function loadFile(f) {
+  if (!mode) { alert('Pilih mode MASUK atau KELUAR dahulu!'); return; }
+  curFile = f; curType = f.type;
+  document.getElementById('fn').textContent = '✓ ' + f.name;
+  document.getElementById('dz').className = 'dz h' + mode;
+  if (f.type === 'application/pdf') {
+    document.getElementById('dc').innerHTML =
+      `<div class="dz-icon">📑</div><div class="dz-txt" style="color:var(--blue)">${f.name}</div><div class="dz-sub">PDF siap diproses</div>`;
+  } else {
+    const r = new FileReader();
+    r.onload = e => { document.getElementById('dc').innerHTML = `<img src="${e.target.result}"/>`; };
+    r.readAsDataURL(f);
+  }
+  chkBtn();
+}
+
+// ===================== PROMPTS =====================
+const PM = `Kamu sistem OCR dokumen logistik Pertamina RU V untuk BARANG MASUK.
+Kembalikan HANYA JSON murni tanpa markdown:
+{"jenis_dokumen":"IMB/DO","data":{"tanggal":"","waktu":"","no_kontrak":"","perusahaan":"","nama_barang":"","total":"","satuan":"","driver":"","no_polisi":"","tujuan":"","keterangan":""}}
+Pilihan jenis: IMB/DO, Surat Jalan Masuk, PO Masuk, Dokumen Masuk Lainnya.
+Format tanggal: Jumat, 13/02/2026. Waktu: HH.MM. Field kosong = string kosong.`;
+
+const PK = `Kamu sistem OCR dokumen logistik Pertamina RU V untuk BARANG KELUAR.
+Kembalikan HANYA JSON murni tanpa markdown:
+{"jenis_dokumen":"Bon Bintang","data":{"tanggal":"","waktu":"","no_manifest":"","nama_barang":"","total":"","satuan":"","driver":"","no_polisi":"","dari":"","tujuan":"","vendor":""}}
+Pilihan jenis: Bon Bintang, MIV, Surat Jalan Keluar, Dokumen Keluar Lainnya.
+Format tanggal: Jumat, 13/02/2026. Waktu: HH.MM. Field kosong = string kosong.`;
+
+// ===================== SCAN =====================
+async function doScan() {
+  if (!curFile || !apiKey || !mode) return;
+  document.getElementById('scanArea').innerHTML = `<div class="loading-box"><i class="fas fa-cog"></i><div style="font-size:13px;font-weight:700;margin-bottom:4px">Membaca dokumen...</div><div style="font-size:11px;color:var(--muted)">AI sedang mengekstrak data ±10 detik</div></div>`;
+
+  try {
+    const b64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('Gagal membaca file'));
+      r.readAsDataURL(curFile);
+    });
+    const isPDF = curType === 'application/pdf';
+    const blk = isPDF
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }
+      : { type: 'image', source: { type: 'base64', media_type: curType || 'image/jpeg', data: b64 } };
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: [blk, { type: 'text', text: mode === 'masuk' ? PM : PK }] }]
+      })
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    if (!data.content || !data.content[0]) throw new Error('Response kosong');
+
+    const raw = data.content.map(i => i.text || '').join('');
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    renderForm(parsed, mode);
+
+  } catch (err) {
+    document.getElementById('scanArea').innerHTML =
+      `<div class="ban-err"><i class="fas fa-circle-exclamation" style="margin-top:1px"></i><div><b>Gagal memproses dokumen</b><br>${err.message}</div></div>`;
+  }
+}
+
+// ===================== RENDER FORM =====================
+function renderForm(parsed, m) {
+  const d = parsed.data;
+  const jenis = parsed.jenis_dokumen;
+  const badgeColor = m === 'masuk' ? 'b-blue' : 'b-orange';
+  const badgeLabel = m === 'masuk' ? 'MASUK' : 'KELUAR';
+
+  let fields = '';
+  if (m === 'masuk') {
+    fields = `
+      <div class="fr">
+        <div class="fg"><label>Hari/Tanggal</label><input id="f-tgl" value="${d.tanggal||''}"></div>
+        <div class="fg"><label>Waktu</label><input id="f-wkt" value="${d.waktu||''}"></div>
+      </div>
+      <div class="fg"><label>No. Kontrak / PO</label><input id="f-nok" value="${d.no_kontrak||''}"></div>
+      <div class="fg"><label>Perusahaan / Vendor</label><input id="f-prs" value="${d.perusahaan||''}"></div>
+      <div class="fr">
+        <div class="fg"><label>Nama Barang</label><input id="f-nb" value="${d.nama_barang||''}"></div>
+        <div class="fg"><label>Total</label><input id="f-tot" value="${d.total||''}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>Satuan</label><input id="f-sat" value="${d.satuan||''}"></div>
+        <div class="fg"><label>Driver</label><input id="f-drv" value="${d.driver||''}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>No. Polisi</label><input id="f-pol" value="${d.no_polisi||''}"></div>
+        <div class="fg"><label>Tujuan</label><input id="f-tuj" value="${d.tujuan||''}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>Physical Check (Nama Petugas)</label><input id="f-chk" placeholder="Nama petugas..."></div>
+        <div class="fg"><label>Keterangan</label><input id="f-ket" value="${d.keterangan||''}"></div>
+      </div>`;
+  } else {
+    fields = `
+      <div class="fr">
+        <div class="fg"><label>Hari/Tanggal</label><input id="f-tgl" value="${d.tanggal||''}"></div>
+        <div class="fg"><label>Waktu</label><input id="f-wkt" value="${d.waktu||''}"></div>
+      </div>
+      <div class="fg"><label>No. Manifest / Bon Bintang</label><input id="f-nom" value="${d.no_manifest||''}"></div>
+      <div class="fr">
+        <div class="fg"><label>Nama Barang</label><input id="f-nb" value="${d.nama_barang||''}"></div>
+        <div class="fg"><label>Total</label><input id="f-tot" value="${d.total||''}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>Satuan</label><input id="f-sat" value="${d.satuan||''}"></div>
+        <div class="fg"><label>Driver</label><input id="f-drv" value="${d.driver||''}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>No. Polisi</label><input id="f-pol" value="${d.no_polisi||''}"></div>
+        <div class="fg"><label>Dari</label><input id="f-dri" value="${d.dari||''}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>Tujuan</label><input id="f-tuj" value="${d.tujuan||''}"></div>
+        <div class="fg"><label>Vendor</label><input id="f-vnd" value="${d.vendor||''}"></div>
+      </div>
+      <div class="fg"><label>Verify Check (Nama Petugas)</label><input id="f-chk" placeholder="Nama petugas..."></div>`;
+  }
+
+  document.getElementById('scanArea').innerHTML = `
+    <div class="cd">
+      <div class="cd-h">
+        <div class="cd-t"><i class="fas fa-check-circle" style="color:var(--green)"></i> Hasil Ekstraksi AI</div>
+        <span class="badge ${badgeColor}">${jenis}</span>
+      </div>
+      <div class="cd-b">
+        <div class="ban-ok" style="margin-bottom:10px"><i class="fas fa-check-circle"></i> Berhasil! Edit jika perlu lalu simpan.</div>
+        <div class="fs">
+          <div class="fs-title"><i class="fas fa-file-lines"></i> ${m === 'masuk' ? 'Barang Masuk' : 'Barang Keluar'}</div>
+          ${fields}
+        </div>
+        <button class="btn-primary btn-green" onclick="saveRec('${m}')">
+          <i class="fas fa-database"></i> SIMPAN KE LOG
+        </button>
+      </div>
+    </div>`;
+}
+
+// ===================== SAVE =====================
+function saveRec(m) {
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const ts = new Date().toISOString();
+
+  if (m === 'masuk') {
+    logM.unshift({ id: ts, ts, tgl: g('f-tgl'), wkt: g('f-wkt'), nok: g('f-nok'), prs: g('f-prs'), nb: g('f-nb'), tot: g('f-tot'), sat: g('f-sat'), drv: g('f-drv'), pol: g('f-pol'), tuj: g('f-tuj'), chk: g('f-chk'), ket: g('f-ket') });
+    localStorage.setItem('fortis_logM', JSON.stringify(logM));
+    updM();
+  } else {
+    logK.unshift({ id: ts, ts, tgl: g('f-tgl'), wkt: g('f-wkt'), nom: g('f-nom'), nb: g('f-nb'), tot: g('f-tot'), sat: g('f-sat'), drv: g('f-drv'), pol: g('f-pol'), dri: g('f-dri'), tuj: g('f-tuj'), chk: g('f-chk'), vnd: g('f-vnd') });
+    localStorage.setItem('fortis_logK', JSON.stringify(logK));
+    updK();
+  }
+
+  document.getElementById('scanArea').innerHTML =
+    `<div class="ban-ok"><i class="fas fa-check-circle" style="font-size:16px"></i> <div><b>Data berhasil disimpan!</b><br>Cek di tab Log ${m === 'masuk' ? 'Masuk' : 'Keluar'} atau Dashboard.</div></div>`;
+  curFile = null; curType = null;
+  document.getElementById('fn').textContent = '';
+  document.getElementById('dc').innerHTML = `<div class="dz-icon">📄</div><div class="dz-txt">Tap untuk upload dokumen</div><div class="dz-sub">Bon Bintang · IMB/DO · Surat Jalan</div>`;
+  document.getElementById('dz').className = 'dz';
+  chkBtn();
+}
+
+// ===================== UPDATE TABLES =====================
+function updM() {
+  const n = logM.length;
+  document.getElementById('cntM').textContent = n;
+  document.getElementById('totM').textContent = n;
+  document.getElementById('exBtnM').disabled = n === 0;
+  document.getElementById('emptyM').style.display = n === 0 ? 'block' : 'none';
+  document.getElementById('tblM').style.display = n === 0 ? 'none' : 'block';
+  const tb = document.getElementById('bdyM'); tb.innerHTML = '';
+  logM.forEach((r, i) => {
+    tb.innerHTML += `<tr>
+      <td>${n - i}</td><td style="white-space:nowrap">${r.tgl}</td><td>${r.wkt}</td>
+      <td>${r.nok}</td><td>${r.prs}</td><td>${r.nb}</td>
+      <td style="text-align:right">${r.tot}</td><td>${r.sat}</td>
+      <td>${r.drv}</td><td style="color:var(--blue);font-weight:700">${r.pol}</td>
+      <td>${r.tuj}</td><td>${r.chk}</td><td>${r.ket}</td>
+      <td><button onclick="delR('masuk','${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px"><i class="fas fa-times"></i></button></td>
+    </tr>`;
+  });
+}
+
+function updK() {
+  const n = logK.length;
+  document.getElementById('cntK').textContent = n;
+  document.getElementById('totK').textContent = n;
+  document.getElementById('exBtnK').disabled = n === 0;
+  document.getElementById('emptyK').style.display = n === 0 ? 'block' : 'none';
+  document.getElementById('tblK').style.display = n === 0 ? 'none' : 'block';
+  const tb = document.getElementById('bdyK'); tb.innerHTML = '';
+  logK.forEach((r, i) => {
+    tb.innerHTML += `<tr>
+      <td>${n - i}</td><td style="white-space:nowrap">${r.tgl}</td><td>${r.wkt}</td>
+      <td>${r.nom}</td><td>${r.nb}</td>
+      <td style="text-align:right">${r.tot}</td><td>${r.sat}</td>
+      <td>${r.drv}</td><td style="color:var(--red);font-weight:700">${r.pol}</td>
+      <td>${r.dri}</td><td>${r.tuj}</td><td>${r.chk}</td><td>${r.vnd}</td>
+      <td><button onclick="delR('keluar','${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px"><i class="fas fa-times"></i></button></td>
+    </tr>`;
+  });
+}
+
+function delR(t, id) {
+  if (t === 'masuk') { logM = logM.filter(r => r.id !== id); localStorage.setItem('fortis_logM', JSON.stringify(logM)); updM(); }
+  else { logK = logK.filter(r => r.id !== id); localStorage.setItem('fortis_logK', JSON.stringify(logK)); updK(); }
+  renderDash();
+}
+
+function clrLog(t) {
+  if (!confirm('Hapus semua log ' + t + '?')) return;
+  if (t === 'masuk') { logM = []; localStorage.setItem('fortis_logM', '[]'); updM(); }
+  else { logK = []; localStorage.setItem('fortis_logK', '[]'); updK(); }
+  renderDash();
+}
+
+// ===================== DASHBOARD =====================
+function renderDash() {
+  const nM = logM.length, nK = logK.length, nTot = nM + nK;
+
+  // Unique vendors
+  const vendors = new Set([...logM.map(r => r.prs), ...logK.map(r => r.vnd)].filter(Boolean));
+  const nVnd = vendors.size;
+
+  // KPI
+  document.getElementById('dIn').textContent = nM;
+  document.getElementById('dOut').textContent = nK;
+  document.getElementById('dTot').textContent = nTot;
+  document.getElementById('dVnd').textContent = nVnd;
+
+  if (nTot === 0) {
+    document.getElementById('nlText').textContent = 'Belum ada data hari ini. Mulai scan dokumen untuk generate dashboard.';
+    document.getElementById('nlChips').innerHTML = '';
+    resetHealthScore();
+    document.getElementById('actFeed').innerHTML = '<div class="empty" style="padding:16px"><i class="fas fa-stream"></i><p>Belum ada aktivitas</p></div>';
+    document.getElementById('topVendor').innerHTML = '<div class="empty" style="padding:16px"><i class="fas fa-building"></i><p>Belum ada data</p></div>';
+    document.getElementById('topTujuan').innerHTML = '<div class="empty" style="padding:16px"><i class="fas fa-map-pin"></i><p>Belum ada data</p></div>';
+    document.getElementById('csBody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);font-size:11px">Scan dokumen untuk generate closing summary</td></tr>';
+    document.getElementById('anomCard').style.display = 'none';
+    if (chartBarang) { chartBarang.destroy(); chartBarang = null; }
+    return;
+  }
+
+  // ---- NL SUMMARY ----
+  const urgentCount = logM.filter(r => !r.nok || r.nok.trim() === '').length;
+  const missingChk = [...logM, ...logK].filter(r => !r.chk || r.chk.trim() === '').length;
+  let nlStatus = urgentCount > 0 ? `Terdeteksi ${urgentCount} transaksi tanpa No. Kontrak (Pre-PO/Urgent).` : 'Seluruh transaksi memiliki nomor kontrak/manifest.';
+  document.getElementById('nlText').textContent =
+    `Hari ini tercatat ${nM} transaksi masuk dan ${nK} transaksi keluar. Total ${nTot} pergerakan barang dari ${nVnd} vendor/perusahaan. ${nlStatus}`;
+
+  let chips = `<div class="nl-chip info"><i class="fas fa-truck-ramp-box"></i> ${nM} Masuk</div>`;
+  chips += `<div class="nl-chip info"><i class="fas fa-truck-arrow-right"></i> ${nK} Keluar</div>`;
+  chips += urgentCount > 0
+    ? `<div class="nl-chip warn"><i class="fas fa-exclamation"></i> ${urgentCount} Urgent</div>`
+    : `<div class="nl-chip ok"><i class="fas fa-check"></i> Full Compliance</div>`;
+  if (missingChk > 0) chips += `<div class="nl-chip warn"><i class="fas fa-user-times"></i> ${missingChk} belum cek fisik</div>`;
+  document.getElementById('nlChips').innerHTML = chips;
+
+  // ---- HEALTH SCORE ----
+  let hs = 100;
+  const penaltyNok = Math.min(30, urgentCount * 5);
+  const penaltyChk = Math.min(20, missingChk * 4);
+  const penaltyEmpty = [...logM, ...logK].filter(r => !r.pol || r.pol.trim() === '').length;
+  hs -= penaltyNok + penaltyChk + Math.min(10, penaltyEmpty * 2);
+  hs = Math.max(0, Math.min(100, hs));
+
+  const hsColor = hs >= 90 ? '#0D8048' : hs >= 70 ? '#D97706' : '#E21F26';
+  const hsLabel = hs >= 90 ? 'EXCELLENT' : hs >= 70 ? 'GOOD' : hs < 50 ? 'CRITICAL' : 'NEEDS ATTENTION';
+  const hsBadgeClass = hs >= 90 ? 'b-green' : hs >= 70 ? 'b-gold' : 'b-red';
+
+  document.getElementById('hsNum').textContent = hs;
+  document.getElementById('hsNum').style.color = hsColor;
+  document.getElementById('hsBadge').className = 'badge ' + hsBadgeClass;
+  document.getElementById('hsBadge').textContent = hsLabel;
+
+  const arc = document.getElementById('hsArc');
+  const circ = 289;
+  arc.style.stroke = hsColor;
+  arc.setAttribute('stroke-dashoffset', circ - (circ * hs / 100));
+
+  // Health Bars
+  const docScore = Math.round(100 - penaltyNok * 3.3);
+  const chkScore = Math.round(100 - penaltyChk * 5);
+  const polScore = Math.round(100 - Math.min(10, penaltyEmpty * 2) * 10);
+  document.getElementById('hsBars').innerHTML = hBar('Kelengkapan Dokumen', docScore, hsColor) +
+    hBar('Pemeriksaan Fisik', chkScore, '#0058A3') +
+    hBar('Data Kendaraan', polScore, '#00838F');
+
+  // ---- ACTIVITY FEED ----
+  const allActs = [
+    ...logM.map(r => ({ ts: r.ts, mode: 'masuk', label: r.nb || r.nok || 'Barang Masuk', sub: (r.prs || '-') + ' · ' + (r.pol || '-'), wkt: r.wkt })),
+    ...logK.map(r => ({ ts: r.ts, mode: 'keluar', label: r.nb || r.nom || 'Barang Keluar', sub: (r.tuj || '-') + ' · ' + (r.pol || '-'), wkt: r.wkt }))
+  ].sort((a, b) => new Date(b.ts) - new Date(a.ts)).slice(0, 10);
+
+  document.getElementById('actBadge').textContent = nTot + ' aktivitas';
+  document.getElementById('actFeed').innerHTML = allActs.map(a => `
+    <div class="act-item">
+      <div class="act-dot" style="background:${a.mode === 'masuk' ? 'var(--blue)' : 'var(--red)'}">
+        <i class="fas fa-${a.mode === 'masuk' ? 'truck-ramp-box' : 'truck-arrow-right'}"></i>
+      </div>
+      <div class="act-info">
+        <div class="act-title">${a.label}</div>
+        <div class="act-meta">${a.sub}</div>
+      </div>
+      <div class="act-time">${a.wkt || '—'}</div>
+    </div>`).join('');
+
+  // ---- TOP VENDOR ----
+  const vCount = {};
+  logM.forEach(r => { if (r.prs) vCount[r.prs] = (vCount[r.prs] || 0) + 1; });
+  logK.forEach(r => { if (r.vnd) vCount[r.vnd] = (vCount[r.vnd] || 0) + 1; });
+  const topV = Object.entries(vCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const maxV = topV[0] ? topV[0][1] : 1;
+  document.getElementById('topVendor').innerHTML = topV.length
+    ? topV.map(([name, cnt]) => `
+      <div class="vbar-item">
+        <div class="vbar-name" title="${name}">${name}</div>
+        <div class="vbar-track"><div class="vbar-fill" style="width:${(cnt/maxV*100).toFixed(0)}%"></div></div>
+        <div class="vbar-num">${cnt}</div>
+      </div>`).join('')
+    : '<div class="empty" style="padding:16px"><i class="fas fa-building"></i><p>Belum ada data</p></div>';
+
+  // ---- TOP TUJUAN ----
+  const tCount = {};
+  logM.forEach(r => { if (r.tuj) tCount[r.tuj] = (tCount[r.tuj] || 0) + 1; });
+  const topT = Object.entries(tCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxT = topT[0] ? topT[0][1] : 1;
+  document.getElementById('topTujuan').innerHTML = topT.length
+    ? topT.map(([name, cnt]) => `
+      <div class="vbar-item">
+        <div class="vbar-name" title="${name}">${name}</div>
+        <div class="vbar-track"><div class="vbar-fill" style="width:${(cnt/maxT*100).toFixed(0)}%;background:var(--orange)"></div></div>
+        <div class="vbar-num">${cnt}</div>
+      </div>`).join('')
+    : '<div class="empty" style="padding:16px"><i class="fas fa-map-pin"></i><p>Belum ada data</p></div>';
+
+  // ---- CHART BARANG KELUAR ----
+  const bCount = {};
+  logK.forEach(r => { if (r.nb) bCount[r.nb] = (bCount[r.nb] || 0) + 1; });
+  const topB = Object.entries(bCount).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  if (chartBarang) chartBarang.destroy();
+  if (topB.length) {
+    const ctx = document.getElementById('chartBarang').getContext('2d');
+    chartBarang = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: topB.map(([n]) => n.length > 14 ? n.slice(0, 14) + '…' : n),
+        datasets: [{ data: topB.map(([, v]) => v), backgroundColor: '#EA580C', borderRadius: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } }
+      }
+    });
+  }
+
+  // ---- CLOSING SUMMARY ----
+  const urgentM = logM.filter(r => !r.nok || r.nok.trim() === '').length;
+  const urgentK = logK.filter(r => !r.nom || r.nom.trim() === '').length;
+  const csMasuk = nM > 0 ? `✅ ${nM} Terverifikasi${urgentM > 0 ? ` (${urgentM} Urgent)` : ''}` : '—';
+  const csKeluar = nK > 0 ? `✅ ${nK} Terverifikasi${urgentK > 0 ? ` (${urgentK} Urgent)` : ''}` : '—';
+  const csUrgent = urgentM + urgentK;
+  document.getElementById('csBody').innerHTML = `
+    <tr>
+      <td><span class="badge b-blue">Masuk (Inbound)</span></td>
+      <td><b>${nM} Transaksi</b></td>
+      <td>${csMasuk}</td>
+      <td>Seluruh dokumen penerimaan barang divalidasi administratif dan fisik sesuai SOP.</td>
+    </tr>
+    <tr>
+      <td><span class="badge b-red">Keluar (Outbound)</span></td>
+      <td><b>${nK} Transaksi</b></td>
+      <td>${csKeluar}</td>
+      <td>Tidak ditemukan deviasi prosedur pada otorisasi pengeluaran aset.</td>
+    </tr>
+    <tr>
+      <td><span class="badge b-orange">Urgent (Pre-PO)</span></td>
+      <td><b>${csUrgent} Transaksi</b></td>
+      <td>${csUrgent > 0 ? `⚠️ ${csUrgent} Terdeteksi` : '✅ Tidak Ada'}</td>
+      <td>${csUrgent > 0 ? `${csUrgent} transaksi urgent terdeteksi. Wajib divalidasi Surat Pertanggungjawaban Direksi sesuai TKO.` : 'Tidak ada transaksi pre-PO hari ini.'}</td>
+    </tr>`;
+
+  // ---- ANOMALY ----
+  const anomalies = [];
+  logM.forEach((r, i) => {
+    if (!r.nok || r.nok.trim() === '') anomalies.push({ label: `Masuk #${logM.length - i}: ${r.nb || '?'}`, msg: 'Tidak ada No. Kontrak/PO — perlu validasi', type: 'warn' });
+    if (!r.chk || r.chk.trim() === '') anomalies.push({ label: `Masuk #${logM.length - i}: ${r.nb || '?'}`, msg: 'Physical Check belum diisi', type: 'info' });
+  });
+  logK.forEach((r, i) => {
+    if (!r.nom || r.nom.trim() === '') anomalies.push({ label: `Keluar #${logK.length - i}: ${r.nb || '?'}`, msg: 'Tidak ada No. Manifest/Bon Bintang', type: 'warn' });
+    if (!r.chk || r.chk.trim() === '') anomalies.push({ label: `Keluar #${logK.length - i}: ${r.nb || '?'}`, msg: 'Verify Check belum diisi', type: 'info' });
+  });
+
+  const anomCard = document.getElementById('anomCard');
+  if (anomalies.length > 0) {
+    anomCard.style.display = 'block';
+    document.getElementById('anomBadge').textContent = anomalies.length + ' item';
+    document.getElementById('anomList').innerHTML = anomalies.slice(0, 8).map(a => `
+      <div class="anom-item">
+        <div class="anom-icon">${a.type === 'warn' ? '⚠️' : 'ℹ️'}</div>
+        <div>
+          <div class="anom-txt"><b>${a.label}</b></div>
+          <div class="anom-meta">${a.msg}</div>
+        </div>
+      </div>`).join('');
+  } else {
+    anomCard.style.display = 'none';
+  }
+}
+
+function hBar(label, val, color) {
+  const pct = Math.max(0, Math.min(100, val));
+  return `<div class="hbar">
+    <div class="hbar-top"><span class="hbar-label">${label}</span><span class="hbar-val">${pct}%</span></div>
+    <div class="hbar-track"><div class="hbar-fill" style="width:${pct}%;background:${color}"></div></div>
+  </div>`;
+}
+
+function resetHealthScore() {
+  document.getElementById('hsNum').textContent = '—';
+  document.getElementById('hsBadge').textContent = '—';
+  document.getElementById('hsArc').setAttribute('stroke-dashoffset', 289);
+  document.getElementById('hsBars').innerHTML = '<div style="font-size:11px;color:var(--muted);text-align:center;padding:10px">Scan dokumen untuk kalkulasi</div>';
+}
+
+// ===================== EXPORT EXCEL =====================
+function exportXL(type) {
+  const yr = new Date().getFullYear();
+  const fd = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+  const wb = XLSX.utils.book_new();
+
+  if (type === 'masuk' && logM.length > 0) {
+    const rows = [
+      ['PT. Kilang Pertamina Internasional RU V Balikpapan'],
+      ['Bagian Security - Fungsi HSSE'],
+      ['Laporan Harian Legality - Pemeriksaan Barang Masuk'],
+      ['            LMM/___/KPI48540/' + yr + '-S0'],
+      [],
+      ['No', 'Hari/Tanggal', 'Waktu', 'No. Kontrak', 'Perusahaan', 'Nama Barang', 'Total', 'Satuan', 'Driver', 'No. Polisi', 'Tujuan', 'Physical Check', 'Keterangan'],
+    ];
+    [...logM].reverse().forEach((r, i) =>
+      rows.push([i + 1, r.tgl, r.wkt, r.nok, r.prs, r.nb, r.tot, r.sat, r.drv, r.pol, r.tuj, r.chk, r.ket])
+    );
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:4},{wch:22},{wch:7},{wch:18},{wch:22},{wch:22},{wch:8},{wch:8},{wch:14},{wch:12},{wch:16},{wch:14},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Monitoring Barang Masuk');
+    XLSX.writeFile(wb, fd + '_-_Barang_Masuk.xlsx');
+  } else if (type === 'keluar' && logK.length > 0) {
+    const rows = [
+      ['PT. Kilang Pertamina Internasional RU V Balikpapan'],
+      ['Bagian Security - Fungsi HSSE'],
+      ['Laporan Harian Legality - Pemeriksaan Barang Keluar'],
+      ['            LKM/___/KPI48540/' + yr + '-S0'],
+      [],
+      ['No', 'Hari/Tanggal', 'Waktu', 'No. Manifest', 'Nama Barang', 'Total', 'Satuan', 'Driver', 'No. Polisi', 'Dari', 'Tujuan', 'Verify Check', 'VENDOR'],
+    ];
+    [...logK].reverse().forEach((r, i) =>
+      rows.push([i + 1, r.tgl, r.wkt, r.nom, r.nb, r.tot, r.sat, r.drv, r.pol, r.dri, r.tuj, r.chk, r.vnd])
+    );
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:4},{wch:22},{wch:7},{wch:22},{wch:22},{wch:8},{wch:8},{wch:14},{wch:12},{wch:14},{wch:16},{wch:14},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Monitoring Barang Keluar');
+    XLSX.writeFile(wb, fd + '_-_Barang_Keluar.xlsx');
+  }
+}
+
+function exportAll() {
+  if (logM.length > 0) exportXL('masuk');
+  if (logK.length > 0) exportXL('keluar');
+  if (logM.length === 0 && logK.length === 0) alert('Belum ada data untuk diekspor.');
+}
+
+// ===================== INIT =====================
+updM(); updK();
+
+// ===================== DESKTOP FUNCTIONS =====================
+let dMode = null, dCurFile = null, dCurType = null, dChartBarang = null;
+
+function isDesktop() { return window.innerWidth >= 1024; }
+
+// Desktop clock
+function dTick() {
+  const n = new Date();
+  const t = n.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' }) + ' WITA';
+  const el1 = document.getElementById('dsk-clock');
+  const el2 = document.getElementById('dsk-topbar-clock');
+  if (el1) el1.textContent = t;
+  if (el2) el2.textContent = t;
+}
+setInterval(dTick, 1000); dTick();
+
+// Desktop pane navigation
+const dPaneTitles = { scan: 'Scan Dokumen', dash: 'Dashboard Harian', masuk: 'Log Barang Masuk', keluar: 'Log Barang Keluar' };
+function dskPane(id) {
+  document.querySelectorAll('.desk-pane').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.snav').forEach(n => n.classList.remove('on'));
+  const dp = document.getElementById('dpane-' + id);
+  const dn = document.getElementById('dsk-tab-' + id);
+  if (dp) dp.classList.add('on');
+  if (dn) dn.classList.add('on');
+  const pt = document.getElementById('dskPageTitle');
+  if (pt) pt.textContent = dPaneTitles[id] || '';
+  if (id === 'dash') dRenderDash();
+  if (id === 'masuk') dUpdM();
+  if (id === 'keluar') dUpdK();
+}
+
+// Desktop API key
+function dChkKey() {
+  const v = document.getElementById('dApiKey').value.trim();
+  const s = document.getElementById('dks');
+  if (v.startsWith('sk-ant')) {
+    apiKey = v;
+    if (s) s.innerHTML = '<span style="color:#A7F3D0;font-size:10px">✓ Valid</span>';
+    // sync to mobile input too
+    const mob = document.getElementById('apiKey');
+    if (mob) mob.value = v;
+  } else {
+    if (v.length > 5 && s) s.innerHTML = '<span style="color:#FCA5A5;font-size:10px">✗ Invalid</span>';
+  }
+  dChkBtn();
+}
+
+function dChkBtn() {
+  const pb = document.getElementById('dPb');
+  if (pb) pb.disabled = !(apiKey && dMode && dCurFile);
+}
+
+// Desktop mode selector
+function dSetMode(m) {
+  dMode = m;
+  document.getElementById('dBtnM').className = 'mb' + (m === 'masuk' ? ' am' : '');
+  document.getElementById('dBtnK').className = 'mb' + (m === 'keluar' ? ' ak' : '');
+  dChkBtn();
+}
+
+// Desktop file handlers
+function dOnDrop(e) { e.preventDefault(); if (e.dataTransfer.files[0]) dLoadFile(e.dataTransfer.files[0]); }
+function dOnFile(e) { if (e.target.files[0]) dLoadFile(e.target.files[0]); }
+
+function dLoadFile(f) {
+  if (!dMode) { alert('Pilih mode MASUK atau KELUAR dahulu!'); return; }
+  dCurFile = f; dCurType = f.type;
+  document.getElementById('dFn').textContent = '✓ ' + f.name;
+  document.getElementById('dDz').className = 'dz h' + dMode;
+  const badge = document.getElementById('dDocBadge');
+  if (badge) badge.textContent = f.name;
+  if (f.type === 'application/pdf') {
+    document.getElementById('dDc').innerHTML = `<div class="dz-icon">📑</div><div class="dz-txt" style="color:var(--blue)">${f.name}</div><div class="dz-sub">PDF siap diproses</div>`;
+  } else {
+    const r = new FileReader();
+    r.onload = e => { document.getElementById('dDc').innerHTML = `<img src="${e.target.result}" style="max-height:160px"/>`; };
+    r.readAsDataURL(f);
+  }
+  dChkBtn();
+}
+
+// Desktop scan
+async function dDoScan() {
+  if (!dCurFile || !apiKey || !dMode) return;
+  document.getElementById('dScanArea').innerHTML = `<div class="loading-box"><i class="fas fa-cog"></i><div style="font-size:13px;font-weight:700;margin-bottom:4px">Membaca dokumen...</div><div style="font-size:11px;color:var(--muted)">AI sedang mengekstrak data ±10 detik</div></div>`;
+
+  try {
+    const b64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('Gagal membaca file'));
+      r.readAsDataURL(dCurFile);
+    });
+    const isPDF = dCurType === 'application/pdf';
+    const blk = isPDF
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }
+      : { type: 'image', source: { type: 'base64', media_type: dCurType || 'image/jpeg', data: b64 } };
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: [blk, { type: 'text', text: dMode === 'masuk' ? PM : PK }] }]
+      })
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    const raw = data.content.map(i => i.text || '').join('');
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    dRenderForm(parsed, dMode);
+
+  } catch (err) {
+    document.getElementById('dScanArea').innerHTML =
+      `<div class="ban-err"><i class="fas fa-circle-exclamation"></i><div><b>Gagal</b><br>${err.message}</div></div>`;
+  }
+}
+
+// Desktop render form
+function dRenderForm(parsed, m) {
+  const d = parsed.data;
+  const jenis = parsed.jenis_dokumen;
+  const badge = document.getElementById('dDocBadge');
+  if (badge) { badge.textContent = jenis; badge.className = 'badge ' + (m === 'masuk' ? 'b-blue' : 'b-orange'); }
+
+  let fields = '';
+  if (m === 'masuk') {
+    fields = `
+      <div class="fr"><div class="fg"><label>Hari/Tanggal</label><input id="df-tgl" value="${d.tanggal||''}"></div><div class="fg"><label>Waktu</label><input id="df-wkt" value="${d.waktu||''}"></div></div>
+      <div class="fg"><label>No. Kontrak / PO</label><input id="df-nok" value="${d.no_kontrak||''}"></div>
+      <div class="fg"><label>Perusahaan / Vendor</label><input id="df-prs" value="${d.perusahaan||''}"></div>
+      <div class="fr"><div class="fg"><label>Nama Barang</label><input id="df-nb" value="${d.nama_barang||''}"></div><div class="fg"><label>Total</label><input id="df-tot" value="${d.total||''}"></div></div>
+      <div class="fr"><div class="fg"><label>Satuan</label><input id="df-sat" value="${d.satuan||''}"></div><div class="fg"><label>Driver</label><input id="df-drv" value="${d.driver||''}"></div></div>
+      <div class="fr"><div class="fg"><label>No. Polisi</label><input id="df-pol" value="${d.no_polisi||''}"></div><div class="fg"><label>Tujuan</label><input id="df-tuj" value="${d.tujuan||''}"></div></div>
+      <div class="fr"><div class="fg"><label>Physical Check</label><input id="df-chk" placeholder="Nama petugas..."></div><div class="fg"><label>Keterangan</label><input id="df-ket" value="${d.keterangan||''}"></div></div>`;
+  } else {
+    fields = `
+      <div class="fr"><div class="fg"><label>Hari/Tanggal</label><input id="df-tgl" value="${d.tanggal||''}"></div><div class="fg"><label>Waktu</label><input id="df-wkt" value="${d.waktu||''}"></div></div>
+      <div class="fg"><label>No. Manifest / Bon Bintang</label><input id="df-nom" value="${d.no_manifest||''}"></div>
+      <div class="fr"><div class="fg"><label>Nama Barang</label><input id="df-nb" value="${d.nama_barang||''}"></div><div class="fg"><label>Total</label><input id="df-tot" value="${d.total||''}"></div></div>
+      <div class="fr"><div class="fg"><label>Satuan</label><input id="df-sat" value="${d.satuan||''}"></div><div class="fg"><label>Driver</label><input id="df-drv" value="${d.driver||''}"></div></div>
+      <div class="fr"><div class="fg"><label>No. Polisi</label><input id="df-pol" value="${d.no_polisi||''}"></div><div class="fg"><label>Dari</label><input id="df-dri" value="${d.dari||''}"></div></div>
+      <div class="fr"><div class="fg"><label>Tujuan</label><input id="df-tuj" value="${d.tujuan||''}"></div><div class="fg"><label>Vendor</label><input id="df-vnd" value="${d.vendor||''}"></div></div>
+      <div class="fg"><label>Verify Check</label><input id="df-chk" placeholder="Nama petugas..."></div>`;
+  }
+
+  document.getElementById('dScanArea').innerHTML = `
+    <div class="ban-ok" style="margin-bottom:12px"><i class="fas fa-check-circle"></i> Berhasil diekstrak! Edit jika perlu lalu simpan.</div>
+    <div class="fs">
+      <div class="fs-title"><i class="fas fa-file-lines"></i> ${m === 'masuk' ? 'Barang Masuk' : 'Barang Keluar'} — ${jenis}</div>
+      ${fields}
+    </div>
+    <button class="btn-primary btn-green" onclick="dSaveRec('${m}')">
+      <i class="fas fa-database"></i> SIMPAN KE LOG
+    </button>`;
+}
+
+// Desktop save
+function dSaveRec(m) {
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const ts = new Date().toISOString();
+
+  if (m === 'masuk') {
+    logM.unshift({ id: ts, ts, tgl: g('df-tgl'), wkt: g('df-wkt'), nok: g('df-nok'), prs: g('df-prs'), nb: g('df-nb'), tot: g('df-tot'), sat: g('df-sat'), drv: g('df-drv'), pol: g('df-pol'), tuj: g('df-tuj'), chk: g('df-chk'), ket: g('df-ket') });
+    localStorage.setItem('fortis_logM', JSON.stringify(logM));
+  } else {
+    logK.unshift({ id: ts, ts, tgl: g('df-tgl'), wkt: g('df-wkt'), nom: g('df-nom'), nb: g('df-nb'), tot: g('df-tot'), sat: g('df-sat'), drv: g('df-drv'), pol: g('df-pol'), dri: g('df-dri'), tuj: g('df-tuj'), chk: g('df-chk'), vnd: g('df-vnd') });
+    localStorage.setItem('fortis_logK', JSON.stringify(logK));
+  }
+
+  updM(); updK(); dUpdM(); dUpdK(); dUpdStats();
+  document.getElementById('dScanArea').innerHTML =
+    `<div class="ban-ok" style="margin-bottom:12px"><i class="fas fa-check-circle" style="font-size:16px"></i><div><b>Data berhasil disimpan!</b><br>Lihat di Log ${m === 'masuk' ? 'Masuk' : 'Keluar'} atau Dashboard.</div></div>
+     <div class="empty" style="padding:30px"><i class="fas fa-camera-retro"></i><p>Upload dokumen berikutnya</p></div>`;
+  dCurFile = null; dCurType = null;
+  document.getElementById('dFn').textContent = '';
+  document.getElementById('dDz').className = 'dz';
+  document.getElementById('dDc').innerHTML = `<div class="dz-icon">📄</div><div class="dz-txt">Klik atau drag & drop dokumen</div><div class="dz-sub">Bon Bintang · IMB/DO · Surat Jalan · PDF</div>`;
+  const badge = document.getElementById('dDocBadge');
+  if (badge) { badge.textContent = 'Menunggu dokumen...'; badge.className = 'badge b-navy'; }
+  dChkBtn();
+}
+
+// Desktop update counters + tables
+function dUpdStats() {
+  const nM = logM.length, nK = logK.length, nTot = nM + nK;
+  const nVnd = new Set([...logM.map(r => r.prs), ...logK.map(r => r.vnd)].filter(Boolean)).size;
+  ['dStM','dStK','dStT','dStV'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = [nM, nK, nTot, nVnd][i];
+  });
+  const cm = document.getElementById('dCntM'), ck = document.getElementById('dCntK');
+  if (cm) cm.textContent = nM;
+  if (ck) ck.textContent = nK;
+}
+
+function dUpdM() {
+  const n = logM.length;
+  const tot = document.getElementById('dTotM'), ex = document.getElementById('dExM');
+  const empty = document.getElementById('dEmptyM'), tbl = document.getElementById('dTblM');
+  if (tot) tot.textContent = n;
+  if (ex) ex.disabled = n === 0;
+  if (empty) empty.style.display = n === 0 ? 'block' : 'none';
+  if (tbl) tbl.style.display = n === 0 ? 'none' : 'block';
+  const tb = document.getElementById('dBdyM');
+  if (!tb) return;
+  tb.innerHTML = '';
+  logM.forEach((r, i) => {
+    tb.innerHTML += `<tr><td>${n-i}</td><td>${r.tgl}</td><td>${r.wkt}</td><td>${r.nok}</td><td>${r.prs}</td><td>${r.nb}</td><td style="text-align:right">${r.tot}</td><td>${r.sat}</td><td>${r.drv}</td><td style="color:var(--blue);font-weight:700">${r.pol}</td><td>${r.tuj}</td><td>${r.chk}</td><td>${r.ket}</td><td><button onclick="delR('masuk','${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px"><i class="fas fa-times"></i></button></td></tr>`;
+  });
+  dUpdStats();
+}
+
+function dUpdK() {
+  const n = logK.length;
+  const tot = document.getElementById('dTotK'), ex = document.getElementById('dExK');
+  const empty = document.getElementById('dEmptyK'), tbl = document.getElementById('dTblK');
+  if (tot) tot.textContent = n;
+  if (ex) ex.disabled = n === 0;
+  if (empty) empty.style.display = n === 0 ? 'block' : 'none';
+  if (tbl) tbl.style.display = n === 0 ? 'none' : 'block';
+  const tb = document.getElementById('dBdyK');
+  if (!tb) return;
+  tb.innerHTML = '';
+  logK.forEach((r, i) => {
+    tb.innerHTML += `<tr><td>${n-i}</td><td>${r.tgl}</td><td>${r.wkt}</td><td>${r.nom}</td><td>${r.nb}</td><td style="text-align:right">${r.tot}</td><td>${r.sat}</td><td>${r.drv}</td><td style="color:var(--red);font-weight:700">${r.pol}</td><td>${r.dri}</td><td>${r.tuj}</td><td>${r.chk}</td><td>${r.vnd}</td><td><button onclick="delR('keluar','${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px"><i class="fas fa-times"></i></button></td></tr>`;
+  });
+  dUpdStats();
+}
+
+// Desktop dashboard (mirrors mobile renderDash)
+function dRenderDash() {
+  const nM = logM.length, nK = logK.length, nTot = nM + nK;
+  const vendors = new Set([...logM.map(r => r.prs), ...logK.map(r => r.vnd)].filter(Boolean));
+  const nVnd = vendors.size;
+
+  const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setEl('ddIn', nM); setEl('ddOut', nK); setEl('ddTot', nTot); setEl('ddVnd', nVnd);
+
+  if (nTot === 0) {
+    setEl('dNlText', 'Belum ada data. Mulai scan dokumen.');
+    const dnlc = document.getElementById('dNlChips'); if (dnlc) dnlc.innerHTML = '';
+    const dact = document.getElementById('dActFeed'); if (dact) dact.innerHTML = '<div class="empty" style="padding:16px"><i class="fas fa-stream"></i><p>Belum ada aktivitas</p></div>';
+    return;
+  }
+
+  const urgentCount = logM.filter(r => !r.nok || r.nok.trim() === '').length;
+  const missingChk = [...logM, ...logK].filter(r => !r.chk || r.chk.trim() === '').length;
+
+  setEl('dNlText', `Hari ini tercatat ${nM} transaksi masuk dan ${nK} transaksi keluar. Total ${nTot} pergerakan barang dari ${nVnd} vendor/perusahaan. ${urgentCount > 0 ? `Terdeteksi ${urgentCount} transaksi tanpa No. Kontrak.` : 'Seluruh transaksi memiliki nomor kontrak/manifest.'}`);
+
+  let chips = `<div class="nl-chip info">${nM} Masuk</div><div class="nl-chip info">${nK} Keluar</div>`;
+  chips += urgentCount > 0 ? `<div class="nl-chip warn">⚠️ ${urgentCount} Urgent</div>` : `<div class="nl-chip ok">✅ Full Compliance</div>`;
+  if (missingChk > 0) chips += `<div class="nl-chip warn">${missingChk} belum cek fisik</div>`;
+  const dnlc = document.getElementById('dNlChips'); if (dnlc) dnlc.innerHTML = chips;
+
+  // Health Score
+  let hs = 100 - Math.min(30, urgentCount * 5) - Math.min(20, missingChk * 4) - Math.min(10, [...logM,...logK].filter(r=>!r.pol||r.pol.trim()==='').length * 2);
+  hs = Math.max(0, Math.min(100, hs));
+  const hsColor = hs >= 90 ? '#0D8048' : hs >= 70 ? '#D97706' : '#E21F26';
+  const hsLabel = hs >= 90 ? 'EXCELLENT' : hs >= 70 ? 'GOOD' : hs < 50 ? 'CRITICAL' : 'NEEDS ATTENTION';
+  setEl('dHsNum', hs);
+  const hn = document.getElementById('dHsNum'); if (hn) hn.style.color = hsColor;
+  const hb = document.getElementById('dHsBadge'); if (hb) { hb.textContent = hsLabel; hb.className = 'badge ' + (hs >= 90 ? 'b-green' : hs >= 70 ? 'b-gold' : 'b-red'); }
+  const arc = document.getElementById('dHsArc');
+  if (arc) { arc.style.stroke = hsColor; arc.setAttribute('stroke-dashoffset', 289 - (289 * hs / 100)); }
+  const hbars = document.getElementById('dHsBars');
+  if (hbars) hbars.innerHTML = hBar('Kelengkapan Dokumen', Math.max(0,100-Math.min(30,urgentCount*5)*3.3), hsColor) + hBar('Pemeriksaan Fisik', Math.max(0,100-Math.min(20,missingChk*4)*5), '#0058A3') + hBar('Data Kendaraan', 100, '#00838F');
+
+  // Activity Feed
+  const actBadge = document.getElementById('dActBadge'); if (actBadge) actBadge.textContent = nTot + ' aktivitas';
+  const allActs = [...logM.map(r=>({ts:r.ts,mode:'masuk',label:r.nb||r.nok||'Barang Masuk',sub:(r.prs||'-')+' · '+(r.pol||'-'),wkt:r.wkt})),...logK.map(r=>({ts:r.ts,mode:'keluar',label:r.nb||r.nom||'Barang Keluar',sub:(r.tuj||'-')+' · '+(r.pol||'-'),wkt:r.wkt}))].sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,8);
+  const daf = document.getElementById('dActFeed');
+  if (daf) daf.innerHTML = allActs.map(a=>`<div class="act-item"><div class="act-dot" style="background:${a.mode==='masuk'?'var(--blue)':'var(--red)'}"><i class="fas fa-${a.mode==='masuk'?'truck-ramp-box':'truck-arrow-right'}"></i></div><div class="act-info"><div class="act-title">${a.label}</div><div class="act-meta">${a.sub}</div></div><div class="act-time">${a.wkt||'—'}</div></div>`).join('');
+
+  // Top Vendor
+  const vCount = {};
+  logM.forEach(r=>{if(r.prs)vCount[r.prs]=(vCount[r.prs]||0)+1});
+  logK.forEach(r=>{if(r.vnd)vCount[r.vnd]=(vCount[r.vnd]||0)+1});
+  const topV = Object.entries(vCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxV = topV[0]?topV[0][1]:1;
+  const dtv = document.getElementById('dTopVendor');
+  if (dtv) dtv.innerHTML = topV.length ? topV.map(([n,c])=>`<div class="vbar-item"><div class="vbar-name" title="${n}">${n}</div><div class="vbar-track"><div class="vbar-fill" style="width:${(c/maxV*100).toFixed(0)}%"></div></div><div class="vbar-num">${c}</div></div>`).join('') : '<div class="empty" style="padding:10px"><p>Belum ada data</p></div>';
+
+  // Top Tujuan
+  const tCount = {};
+  logM.forEach(r=>{if(r.tuj)tCount[r.tuj]=(tCount[r.tuj]||0)+1});
+  const topT = Object.entries(tCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxT = topT[0]?topT[0][1]:1;
+  const dtt = document.getElementById('dTopTujuan');
+  if (dtt) dtt.innerHTML = topT.length ? topT.map(([n,c])=>`<div class="vbar-item"><div class="vbar-name" title="${n}">${n}</div><div class="vbar-track"><div class="vbar-fill" style="width:${(c/maxT*100).toFixed(0)}%;background:var(--orange)"></div></div><div class="vbar-num">${c}</div></div>`).join('') : '<div class="empty" style="padding:10px"><p>Belum ada data</p></div>';
+
+  // Chart
+  const bCount = {};
+  logK.forEach(r=>{if(r.nb)bCount[r.nb]=(bCount[r.nb]||0)+1});
+  const topB = Object.entries(bCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if (dChartBarang) dChartBarang.destroy();
+  if (topB.length) {
+    const ctx = document.getElementById('dChartBarang');
+    if (ctx) dChartBarang = new Chart(ctx.getContext('2d'), {
+      type:'bar', data:{labels:topB.map(([n])=>n.length>14?n.slice(0,14)+'…':n),datasets:[{data:topB.map(([,v])=>v),backgroundColor:'#EA580C',borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}}},x:{ticks:{font:{size:9}}}}}
+    });
+  }
+
+  // Anomaly
+  const anomalies = [];
+  logM.forEach((r,i)=>{
+    if(!r.nok||r.nok.trim()==='') anomalies.push({label:`Masuk #${logM.length-i}: ${r.nb||'?'}`,msg:'Tidak ada No. Kontrak/PO',type:'warn'});
+    if(!r.chk||r.chk.trim()==='') anomalies.push({label:`Masuk #${logM.length-i}: ${r.nb||'?'}`,msg:'Physical Check belum diisi',type:'info'});
+  });
+  logK.forEach((r,i)=>{
+    if(!r.nom||r.nom.trim()==='') anomalies.push({label:`Keluar #${logK.length-i}: ${r.nb||'?'}`,msg:'Tidak ada No. Manifest',type:'warn'});
+    if(!r.chk||r.chk.trim()==='') anomalies.push({label:`Keluar #${logK.length-i}: ${r.nb||'?'}`,msg:'Verify Check belum diisi',type:'info'});
+  });
+  const dab = document.getElementById('dAnomBadge'); if (dab) dab.textContent = anomalies.length + ' item';
+  const dal = document.getElementById('dAnomList');
+  if (dal) dal.innerHTML = anomalies.length ? anomalies.slice(0,8).map(a=>`<div class="anom-item"><div class="anom-icon">${a.type==='warn'?'⚠️':'ℹ️'}</div><div><div class="anom-txt"><b>${a.label}</b></div><div class="anom-meta">${a.msg}</div></div></div>`).join('') : '<div class="empty" style="padding:16px"><i class="fas fa-check-circle" style="color:var(--green)"></i><p>Tidak ada anomali</p></div>';
+
+  // Closing Summary
+  const urgentM = logM.filter(r=>!r.nok||r.nok.trim()==='').length;
+  const urgentK = logK.filter(r=>!r.nom||r.nom.trim()==='').length;
+  const csUrgent = urgentM + urgentK;
+  const dcb = document.getElementById('dCsBody');
+  if (dcb) dcb.innerHTML = `<tr><td><span class="badge b-blue">Masuk</span></td><td><b>${nM} Transaksi</b></td><td>${nM>0?`✅ ${nM} Terverifikasi${urgentM>0?` (${urgentM} Urgent)`:''}` :'—'}</td><td>Dokumen penerimaan barang divalidasi sesuai SOP.</td></tr><tr><td><span class="badge b-red">Keluar</span></td><td><b>${nK} Transaksi</b></td><td>${nK>0?`✅ ${nK} Terverifikasi${urgentK>0?` (${urgentK} Urgent)`:''}`:'—'}</td><td>Tidak ditemukan deviasi prosedur otorisasi pengeluaran.</td></tr><tr><td><span class="badge b-orange">Urgent</span></td><td><b>${csUrgent} Transaksi</b></td><td>${csUrgent>0?`⚠️ ${csUrgent} Terdeteksi`:'✅ Tidak Ada'}</td><td>${csUrgent>0?`${csUrgent} transaksi urgent wajib divalidasi Surat Pertanggungjawaban Direksi (TKO).`:'Tidak ada transaksi pre-PO hari ini.'}</td></tr>`;
+}
+
+// Init desktop
+dUpdStats(); dUpdM(); dUpdK();
+</script>
+</body>
+</html>
